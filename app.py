@@ -1,4 +1,7 @@
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Union
 import pandas as pd
@@ -58,6 +61,13 @@ def get_recommendations(track_ids, top_n=5):
 
     recommendations.sort(key=lambda x: x['distance'])
     return recommendations
+
+app.mount("/static", StaticFiles(directory="view"), name="static")
+
+
+@app.get("/")
+def read_root():
+    return FileResponse("view/index.html")
 
 @app.post("/recommendations")
 def recommend(request: RecommendationRequest):
