@@ -37,4 +37,7 @@ GET /songs?page=1&limit=10
 ✅ How to Run
 1.	Install dependencies - `pip install -r requirements.txt`
 2.	Run the API - `uvicorn app:app --reload`
-3.	Access Swagger docs at - `http://localhost:8000/docs`
+3.	Access the application:
+- 🌐 User Interface (UI): View and interact with the music recommender web app. -> `http://localhost:8000`
+-	📚 API Docs (Swagger): Test and explore the API endpoints directly. -> `http://localhost:8000/docs`
+
