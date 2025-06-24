@@ -10,15 +10,34 @@
 </head>
 
 <body class="bg-gray-100 text-gray-800 font-sans">
+  <!-- Fullscreen Loading Overlay -->
+  <div id="loadingOverlay" class="hidden fixed inset-0 bg-white bg-opacity-75 z-50 flex items-center justify-center">
+    <div class="text-xl text-blue-700 font-semibold animate-pulse">🔄 Searching...</div>
+  </div>
+
   <div id="app" class="max-w-4xl mx-auto py-10 px-4">
     <!-- Song Listing -->
     <div id="listingPage">
       <h1 class="text-2xl sm:text-3xl font-bold mb-4 text-center">🎵 Music Engine</h1>
 
+      <!-- Search bar-->
+      <div class="mb-4 flex gap-2">
+        <input id="searchInput" type="text" placeholder="Search by song or artist..."
+          class="flex-1 px-4 py-2 border border-gray-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        <button id="searchButton" onclick="searchFromAPI()"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">
+          🔍 Search
+        </button>
+      </div>
+
       <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-        <button onclick="nextPage()"
+        <button id="loadMoreBtn" onclick="nextPage()"
           class="px-5 py-2 bg-white border border-gray-300 rounded-lg shadow hover:bg-gray-100 transition">
           Load More
+        </button>
+        <button id="clearSearchBtn" onclick="clearSearch()"
+          class="hidden px-5 py-2 bg-yellow-500 text-white rounded-lg shadow hover:bg-yellow-600 transition">
+          Clear Search
         </button>
         <button onclick="submitSelection()"
           class="px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">
@@ -75,20 +94,63 @@
         const songEl = document.createElement('div');
         songEl.className = 'flex items-start gap-3 p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition';
         songEl.innerHTML = `
-          <input type="checkbox" class="mt-1" ${isChecked ? 'checked' : ''} onchange="toggleSelection('${song.track_id}')" ${!isChecked && selectedTrackIds.length >= 5 ? 'disabled' : ''}>
-          <span><strong>${song.track_name}</strong> by ${song.artist_name} <span class="text-sm text-gray-500">(${song.genre})</span></span>
-        `;
+        <input type="radio" name="songRadio" class="mt-1 song-radio" ${isChecked ? 'checked' : ''} onchange="selectTrack('${song.track_id}')">          
+        <span><strong>${song.track_name}</strong> by ${song.artist_name} <span class="text-sm text-gray-500">(${song.genre})</span></span>
+      `;
         list.appendChild(songEl);
       });
     }
 
-    function toggleSelection(trackId) {
-      const index = selectedTrackIds.indexOf(trackId);
-      if (index > -1) {
-        selectedTrackIds.splice(index, 1);
-      } else if (selectedTrackIds.length < 5) {
-        selectedTrackIds.push(trackId);
+    function selectTrack(trackId) {
+      selectedTrackIds = [trackId]; // Only one selection allowed
+    }
+
+    async function searchFromAPI() {
+      const queryInput = document.getElementById('searchInput');
+      const searchBtn = document.getElementById('searchButton');
+      const overlay = document.getElementById('loadingOverlay');
+
+      const query = queryInput.value.trim();
+      if (!query) { 
+        alert("Missing search text...")
+        return; }
+
+      // Show overlay and disable UI
+      overlay.classList.remove('hidden');
+      queryInput.disabled = true;
+      searchBtn.disabled = true;
+      document.querySelectorAll('.song-radio').forEach(rb => rb.disabled = true);
+
+      try {
+        const res = await fetch(`/search?query=${encodeURIComponent(query)}`);
+        if (!res.ok) throw new Error("Search failed");
+        const data = await res.json();
+        renderSongs(data.results);
+        selectedTrackIds = [];
+        document.getElementById('clearSearchBtn').classList.remove('hidden');
+        document.getElementById('loadMoreBtn').classList.add('hidden');
+      } catch (err) {
+        alert("An error occurred during search.");
+        console.error(err);
+      } finally {
+        overlay.classList.add('hidden');
+        queryInput.disabled = false;
+        searchBtn.disabled = false;
+        document.querySelectorAll('.song-radio').forEach(rb => rb.disabled = false);
       }
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('searchInput');
+      const clearBtn = document.getElementById('clearSearchBtn');
+      const loadMoreBtn = document.getElementById('loadMoreBtn');
+
+      input.value = '';
+
+      clearBtn.classList.add('hidden');
+      loadMoreBtn.classList.remove('hidden');
+
+      renderSongs(songsFromAPI);
     }
 
     function nextPage() {
@@ -97,7 +159,7 @@
     }
 
     async function submitSelection() {
-      if (selectedTrackIds.length === 0) return alert("Select at least 1 song.");
+      if (selectedTrackIds.length === 0) return alert("No track selected...");
       try {
         const res = await fetch('/recommendations', {
           method: 'POST',
@@ -120,11 +182,11 @@
       recsList.innerHTML = '';
       recs.forEach(song => {
         recsList.innerHTML += `
-          <div class="p-3 border border-gray-200 rounded-lg bg-gray-50">
-            <strong>${song.track_name}</strong> by ${song.artist_name} <span class="text-sm text-gray-500">(${song.genre})</span>
-            <div class="text-sm text-blue-600 mt-1">${song.similarity}% similar</div>
-          </div>
-        `;
+        <div class="p-3 border border-gray-200 rounded-lg bg-gray-50">
+          <strong>${song.track_name}</strong> by ${song.artist_name} <span class="text-sm text-gray-500">(${song.genre})</span>
+          <div class="text-sm text-blue-600 mt-1">${song.similarity}% similar</div>
+        </div>
+      `;
       });
       document.getElementById('recommendationsPage').classList.remove('hidden');
     }
@@ -139,8 +201,13 @@
       document.getElementById('recommendationsPage').classList.add('hidden');
       document.getElementById('errorPage').classList.add('hidden');
       document.getElementById('listingPage').classList.remove('hidden');
-      selectedTrackIds = [];
-      fetchSongs(currentPage);
+
+      // Reset search UI
+      document.getElementById('searchInput').value = '';
+      document.getElementById('clearSearchBtn').classList.add('hidden');
+      document.getElementById('loadMoreBtn').classList.remove('hidden');
+
+      renderSongs(songsFromAPI); // Reload original list
     }
 
     // Initial load

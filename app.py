@@ -91,3 +91,22 @@ def get_songs(page: int = Query(1, ge=1), limit: int = Query(20, ge=1, le=100)):
         "total_pages": (total + limit - 1) // limit,
         "songs": songs
     }
+
+@app.get("/search")
+def search_songs(query: str = Query(..., min_length=1)):
+    query_lower = query.lower()
+
+    def matches(row):
+        return any(
+            query_lower in str(row[field]).lower()
+            for field in ['track_name', 'artist_name']
+            if pd.notna(row[field])
+        )
+
+    results = df[df.apply(matches, axis=1)]
+
+    if results.empty:
+        return {"results": []}
+    
+    songs = results[['track_id', 'track_name', 'artist_name']].to_dict(orient='records')
+    return {"results": songs}
