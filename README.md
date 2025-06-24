@@ -22,9 +22,42 @@ This project takes a dataset of songs and their audio features (e.g., tempo, val
   "top_n": 5
 }
 ```
+Response:
+```
+{
+  "recommendations": [
+    {
+      "track_id": "4ZLzoOkjX2rYf8n3z9pguT",
+      "track_name": "Electric Feel",
+      "artist_name": "MGMT",
+      "genre": "Indie Rock",
+      "similarity": 92.7
+    }, ...
+}
+```
+
 2. GET `/songs` - Fetches songs with pagination.
 ```
 GET /songs?page=1&limit=10
+```
+
+3. GET `/search` - Searches for songs by name or artist.
+```
+GET /search?query=Coldplay
+```
+Response:
+```
+{
+  "results": [
+    {
+      "track_id": "123",
+      "track_name": "Fix You",
+      "artist_name": "Coldplay",
+      "genre": "Alternative"
+    },
+    ...
+  ]
+}
 ```
 
 🛠 Tech Stack
