@@ -1,3 +1,5 @@
+#### URL - `https://musicengine.up.railway.app/`
+
 🎵 Music Recommendation Engine
 
 An end-to-end music recommendation system powered by machine learning (k-Nearest Neighbors) and served via a FastAPI backend.
